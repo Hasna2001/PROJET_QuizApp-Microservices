@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Résultats de votre Quiz</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+            <!-- En-tête -->
+            <tr><td style="background:#2c3e50;color:#ffffff;padding:24px;text-align:center;">
+                <h1 style="margin:0;font-size:22px;">Quiz Application</h1>
+            </td></tr>
+            <!-- Corps -->
+            <tr><td style="padding:32px;color:#333333;">
+                <p style="font-size:16px;">Bonjour <strong th:text="${prenom} + ' ' + ${nom}">Prénom Nom</strong>,</p>
+                <p style="font-size:15px;">Voici les résultats de votre <strong>Quiz #<span th:text="${quizId}">1</span></strong> :</p>
+
+                <div style="background:#eaf7ee;border-left:6px solid #27ae60;padding:16px;margin:20px 0;border-radius:4px;">
+                    <div style="font-size:13px;color:#555;">Votre score</div>
+                    <div style="font-size:30px;font-weight:bold;color:#27ae60;" th:text="${score}">8</div>
+                </div>
+
+                <div style="background:#fff6e5;border-left:6px solid #f39c12;padding:16px;margin:20px 0;border-radius:4px;">
+                    <div style="font-size:13px;color:#555;">Points gagnés</div>
+                    <div style="font-size:30px;font-weight:bold;color:#f39c12;" th:text="${points}">70</div>
+                </div>
+
+                <p style="font-size:14px;color:#666;">Continuez comme ça et grimpez dans le classement !</p>
+            </td></tr>
+            <!-- Pied de page -->
+            <tr><td style="background:#ecf0f1;color:#7f8c8d;padding:16px;text-align:center;font-size:12px;">
+                Cet e-mail a été envoyé automatiquement, merci de ne pas y répondre.
+            </td></tr>
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>
