@@ -3,11 +3,11 @@
 # Prerequis : docker compose up --build -d  (attendre ~1-2 min que tout s'enregistre dans Eureka)
 set -e
 GW=${GW:-http://localhost:8765}
-EMAIL="fatou$RANDOM@example.com"
+EMAIL="hassanatou$RANDOM@example.com"
 
 echo "== 1. Inscription"
 curl -s -X POST $GW/user-service/user/inscrire -H "Content-Type: application/json" \
-  -d "{\"nom\":\"Ndiaye\",\"prenom\":\"Fatou\",\"email\":\"$EMAIL\",\"motDePasse\":\"secret123\"}"; echo
+  -d "{\"nom\":\"Baldé\",\"prenom\":\"Hassanatou\",\"email\":\"$EMAIL\",\"motDePasse\":\"secret123\"}"; echo
 
 echo "== 2. Login (recupere le JWT)"
 LOGIN=$(curl -s -X POST $GW/auth-service/auth/login -H "Content-Type: application/json" \

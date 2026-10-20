@@ -151,8 +151,8 @@ $base = "http://localhost:8765"
 $email = "utilisateur@example.com"
 
 $inscription = @{
-    nom = "Ndiaye"
-    prenom = "Fatou"
+    nom = "Baldé"
+    prenom = "Hassanatou"
     email = $email
     motDePasse = "secret123"
 } | ConvertTo-Json
