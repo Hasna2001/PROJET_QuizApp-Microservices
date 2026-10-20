@@ -1,0 +1,169 @@
+# docker-compose.yml : QuizApp (9 microservices + MySQL)
+# Demarrage : docker compose up --build -d
+
+x-eureka-env: &eureka-env
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://register-service:8761/eureka/
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+networks:
+  quizapp-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootroot
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports: ["3307:3306"]   # 3307 cote hote pour ne pas entrer en conflit avec un MySQL local
+    networks: [quizapp-net]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootroot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  register-service:
+    build: ./register-service
+    container_name: register-service
+    ports: ["8761:8761"]
+    networks: [quizapp-net]
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      register-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?createDatabaseIfNotExist=true&serverTimezone=UTC
+    ports: ["8091:8091"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    depends_on:
+      register-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      JWT_SECRET: ${JWT_SECRET}
+    ports: ["8093:8093"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  question-service:
+    build: ./question-service
+    container_name: question-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      register-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/questionsdb?createDatabaseIfNotExist=true&serverTimezone=UTC
+    ports: ["8096:8096"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  quiz-service:
+    build: ./quiz-service
+    container_name: quiz-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      register-service:
+        condition: service_started
+      question-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/quizdb?createDatabaseIfNotExist=true&serverTimezone=UTC
+    ports: ["8090:8090"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    depends_on:
+      register-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      GMAIL_USERNAME: ${GMAIL_USERNAME:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+    ports: ["8094:8094"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  gratification-service:
+    build: ./gratification-service
+    container_name: gratification-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      register-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/gratificationdb?createDatabaseIfNotExist=true&serverTimezone=UTC
+    ports: ["8092:8092"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  leaderboard-service:
+    build: ./leaderboard-service
+    container_name: leaderboard-service
+    depends_on:
+      register-service:
+        condition: service_started
+      gratification-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+    ports: ["8095:8095"]
+    networks: [quizapp-net]
+    restart: on-failure
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    depends_on:
+      register-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      quiz-service:
+        condition: service_started
+    environment:
+      <<: *eureka-env
+      JWT_SECRET: ${JWT_SECRET}
+    ports: ["8765:8765"]
+    networks: [quizapp-net]
+    restart: on-failure
