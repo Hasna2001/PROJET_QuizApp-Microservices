@@ -4,7 +4,7 @@
 
 QuizApp est une application backend de quiz organisée en microservices Spring Boot. Les services se découvrent avec Eureka, les requêtes externes passent par une API Gateway et MySQL conserve les comptes, les questions, les quiz et les gratifications.
 
-**Ce dépôt ne contient pas d’interface graphique frontend.** `http://localhost:8761` ouvre le tableau de bord Eureka. `http://localhost:8765` est la Gateway d’API, pas une page d’accueil : l’URL `/` n’est pas une route métier. Pour tester l’application, utilisez les chemins d’API ci-dessous avec un client HTTP (PowerShell, curl ou Postman). Un navigateur seul ne peut pas envoyer le jeton requis ni les corps JSON des requêtes `POST`.
+**Ce dépôt ne contient pas d’interface graphique frontend.** `http://localhost:8761` ouvre le tableau de bord Eureka. `http://localhost:8765` affiche les informations de la Gateway au format JSON ; ce n’est pas une interface graphique. Pour utiliser l’application, appelez les chemins d’API ci-dessous avec un client HTTP (PowerShell, curl ou Postman). Un navigateur seul ne peut pas envoyer le jeton requis ni les corps JSON des requêtes `POST`.
 
 ## 2. Architecture et responsabilités
 
@@ -56,31 +56,36 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 Ouvrez `.env` et définissez un `JWT_SECRET` propre à votre environnement (la valeur de l’exemple est réservée au développement). Pour activer les courriels, renseignez `GMAIL_USERNAME` et `GMAIL_APP_PASSWORD` avec un mot de passe d’application Gmail. Ces valeurs sont facultatives pour le démarrage et le parcours du quiz.
 
 ```powershell
-docker compose up --build -d
-docker compose ps
+docker compose -p quizapp-microservices up --build -d
+docker compose -p quizapp-microservices ps
 ```
 
-Suivre le démarrage et diagnostiquer un service :
+La première compilation peut prendre quelques minutes. Au démarrage, la Gateway peut aussi avoir besoin de quelques minutes pour terminer son initialisation. Vérifiez qu’elle répond avant de commencer le parcours API :
 
 ```powershell
-docker compose logs -f register-service
-docker compose logs -f user-service
-docker compose logs -f api-gateway
+Invoke-RestMethod http://localhost:8765/
 ```
 
-Attendez que les services apparaissent dans [Eureka](http://localhost:8761). MySQL doit être sain et les microservices doivent avoir démarré et s’être enregistrés avant que la Gateway puisse les router. La première compilation peut prendre quelques minutes.
+Attendez que les services apparaissent dans [Eureka](http://localhost:8761). MySQL doit être sain et les microservices doivent avoir démarré et s’être enregistrés avant que la Gateway puisse les router. Pour suivre les journaux, appuyez sur `Ctrl+C` pour quitter l’affichage des journaux ; cela n’arrête pas le conteneur :
+
+```powershell
+docker compose -p quizapp-microservices logs -f api-gateway
+docker compose -p quizapp-microservices logs -f question-service
+```
 
 Pour arrêter l’application sans supprimer les données :
 
 ```powershell
-docker compose down
+docker compose -p quizapp-microservices down
 ```
 
 Pour arrêter l’application **et effacer les données enregistrées** dans le volume MySQL :
 
 ```powershell
-docker compose down -v
+docker compose -p quizapp-microservices down -v
 ```
+
+> `down -v` efface définitivement les données des quiz, comptes et questions stockées dans le volume MySQL. Ne l’utilisez pas pour un arrêt normal.
 
 ## 5. Démarrage local sous Windows
 
@@ -143,6 +148,85 @@ Il faut que Maven soit accessible dans `PATH` ou installé à l’un des emplace
 Les routes marquées **Interne** sont utilisées par les échanges entre microservices ; elles ne sont pas nécessaires pour le parcours utilisateur normal.
 
 ## 7. Exemple de parcours HTTP sous PowerShell
+
+### Parcours complet interactif sous Windows
+
+Ce script crée un compte, se connecte, crée un quiz Java, affiche les questions, demande une réponse pour chacune et affiche le score. Exécutez tout le bloc dans une seule fenêtre PowerShell, avec Docker démarré. Saisissez votre adresse e-mail et choisissez un mot de passe ; ne réutilisez pas ce mot de passe sur un autre service.
+
+```powershell
+$base = "http://localhost:8765"
+$email = Read-Host "Ton adresse e-mail"
+$motDePasse = Read-Host "Choisis un mot de passe pour ce compte de démonstration"
+
+# \u00e9 représente « é » en JSON et évite les problèmes d'encodage
+# des accents avec Windows PowerShell 5.
+$inscriptionJson = '{"nom":"Bald\u00e9","prenom":"Hassanatou","email":"' + $email + '","motDePasse":"' + $motDePasse + '"}'
+$inscriptionBody = [System.Text.Encoding]::UTF8.GetBytes($inscriptionJson)
+
+try {
+    Invoke-RestMethod -Method Post -Uri "$base/user-service/user/inscrire" `
+        -ContentType "application/json; charset=utf-8" -Body $inscriptionBody
+} catch {
+    if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 409) {
+        Write-Host "Ce compte existe déjà ; la connexion va être tentée."
+    } else {
+        throw
+    }
+}
+
+$identifiants = @{
+    email = $email
+    motDePasse = $motDePasse
+} | ConvertTo-Json
+
+$session = Invoke-RestMethod -Method Post -Uri "$base/auth-service/auth/login" `
+    -ContentType "application/json" -Body $identifiants
+$headers = @{ Authorization = "Bearer $($session.token)" }
+
+$quiz = @{
+    categorie = "Java"
+    numQuestions = 5
+    titre = "Quiz Java"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "$base/quiz-service/quiz/creer" `
+    -Headers $headers -ContentType "application/json" -Body $quiz
+
+# La création renvoie "Success" et non l'identifiant du quiz.
+$quizId = [int](docker exec mysql mysql -N -uroot -prootroot quizdb -e "SELECT MAX(id) FROM quiz")
+$questions = Invoke-RestMethod -Method Get -Uri "$base/quiz-service/quiz/get/$quizId" `
+    -Headers $headers
+
+$reponses = @()
+foreach ($question in $questions) {
+    Write-Host ""
+    Write-Host $question.questionTitle
+    Write-Host "1) $($question.option1)"
+    Write-Host "2) $($question.option2)"
+    Write-Host "3) $($question.option3)"
+    Write-Host "4) $($question.option4)"
+
+    do {
+        $choix = Read-Host "Ta réponse (1-4)"
+    } while ($choix -notmatch '^[1-4]$')
+
+    $nomOption = "option$choix"
+    $reponses += @{
+        id = $question.id
+        response = [string]$question.$nomOption
+    }
+}
+
+$corpsReponses = ConvertTo-Json -InputObject @($reponses) -Depth 5
+$score = Invoke-RestMethod -Method Post `
+    -Uri "$base/quiz-service/quiz/submit/$quizId`?utilisateurId=$($session.utilisateurId)" `
+    -Headers $headers -ContentType "application/json" -Body $corpsReponses
+
+Write-Host ""
+Write-Host "Résultat : $score / $($questions.Count)"
+```
+
+Si le compte existe déjà et que tu as oublié son mot de passe, le script ne peut pas le réinitialiser : connecte-toi avec le bon mot de passe ou utilise une autre adresse. Si aucune question Java n’est disponible, vérifie les journaux de `question-service`.
 
 ### Inscription et connexion
 
@@ -232,14 +316,14 @@ La gratification est calculée à partir du score obtenu au quiz :
 
 `init-db.sql` crée les bases `userdb`, `questionsdb`, `quizdb` et `gratificationdb` lors de l’initialisation du volume MySQL Docker. Les tables sont ensuite gérées par Hibernate (`ddl-auto=update`). En exécution locale, les propriétés de connexion demandent la création des bases si nécessaire.
 
-Au premier démarrage de `question-service`, 20 questions de démonstration sont insérées si la table est vide : 12 questions Java et 8 questions Python. Une base déjà remplie n’est pas réinitialisée par ce chargement.
+Au premier démarrage de `question-service`, 20 questions de démonstration sont insérées si la table est vide : 12 questions Java et 8 questions Python. Au démarrage suivant, les anciennes questions Java de démonstration reconnues par leur texte sont mises à jour sans changer leurs identifiants ; les autres questions et les données des autres services sont conservées.
 
 ## 9. Diagnostic des erreurs courantes
 
 | Symptôme | Cause probable | Vérification / action |
 |---|---|---|
 | Eureka répond, mais les routes Gateway renvoient `404` | Le microservice ciblé n’a pas démarré ou n’est pas enregistré dans Eureka ; le chemin ou son préfixe est incorrect | Vérifier le service dans [Eureka](http://localhost:8761), consulter ses journaux et utiliser le chemin complet `/identifiant-service/chemin-du-contrôleur` |
-| `404` en ouvrant `http://localhost:8765/` | Il n’y a pas de page d’accueil ni de frontend dans ce dépôt | Appeler une route d’API réelle avec sa méthode HTTP |
+| `404` en ouvrant `http://localhost:8765/` | La Gateway n’a pas été reconstruite ou redémarrée | Avec Docker : exécuter `docker compose -p quizapp-microservices up --build -d api-gateway`, puis réessayer |
 | `401 Unauthorized` | Jeton absent, invalide ou envoyé sans le préfixe `Bearer ` | Se reconnecter, puis envoyer `Authorization: Bearer <JWT>` |
 | `405 Method Not Allowed` | La route existe, mais la méthode HTTP n’est pas celle attendue | Respecter la méthode indiquée dans le tableau des API (`GET`, `POST`, etc.) |
 | Service de données en échec au démarrage local | MySQL absent, inaccessible ou identifiants différents | Vérifier `localhost:3306`, le compte et le mot de passe MySQL dans les propriétés du service |
