@@ -22,7 +22,7 @@ public class QuizController {
         return quizService.createQuiz(quizDTO.getCategorie(), quizDTO.getNumQuestions(), quizDTO.getTitre());
     }
 
-    @GetMapping("get/{id}")
+    @GetMapping(value = "get/{id}", produces = "application/json;charset=UTF-8")
     public ResponseEntity<List<QuestionWrapper>> getQuizQuestions(@PathVariable Integer id) {
         return quizService.questionsQuiz(id);
     }

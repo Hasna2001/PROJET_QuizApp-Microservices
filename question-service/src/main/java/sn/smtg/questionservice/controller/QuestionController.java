@@ -17,12 +17,12 @@ public class QuestionController {
     @Autowired
     QuestionService questionService;
 
-    @GetMapping("allQuestions")
+    @GetMapping(value = "allQuestions", produces = "application/json;charset=UTF-8")
     public ResponseEntity<List<Question>> getAllQuestion() {
         return questionService.allQuestion();
     }
 
-    @GetMapping("categorie/{categorie}")
+    @GetMapping(value = "categorie/{categorie}", produces = "application/json;charset=UTF-8")
     public List<Question> getQuestionbyCategorie(@PathVariable String categorie) {
         return questionService.getQuestionByCategorie(categorie);
     }
@@ -39,7 +39,7 @@ public class QuestionController {
         return questionService.getQuestionForQuiz(nomCategorie, nombreDeQuestions);
     }
 
-    @PostMapping("getQuestions")
+    @PostMapping(value = "getQuestions", produces = "application/json;charset=UTF-8")
     public ResponseEntity<List<QuestionWrapper>> getQuestionsFromId(@RequestBody List<Integer> questionIds) {
         return questionService.getQuestionsFromId(questionIds);
     }
