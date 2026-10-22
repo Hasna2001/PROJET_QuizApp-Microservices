@@ -151,6 +151,8 @@ Il faut que Maven soit accessible dans `PATH` ou installé à l’un des emplace
 
 Les routes marquées **Interne** sont utilisées par les échanges entre microservices ; elles ne sont pas nécessaires pour le parcours utilisateur normal.
 
+**Limite de sécurité importante :** la mention « JWT » ci-dessus signifie que la requête est contrôlée lorsqu’elle passe par la Gateway. Dans `docker-compose.yml`, les ports des services métier sont également publiés sur l’hôte ; un appel direct à ces ports contourne donc ce contrôle. En particulier, `user-service` autorise actuellement toutes les requêtes dans sa configuration Spring Security. Ne considérez pas les opérations sensibles comme protégées contre un accès direct.
+
 ## 7. Exemple de parcours HTTP sous PowerShell
 
 ### Parcours complet interactif sous Windows
@@ -349,7 +351,9 @@ Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers loca
 ## 11. Portée et limites connues
 
 - Les appels interservices sont synchrones ; Resilience4j et les mécanismes de reprise ne sont pas configurés.
-- Le JWT est contrôlé par la Gateway ; les services métier ne revalident pas indépendamment le jeton.
-- Le secret JWT est partagé entre l’authentification et la Gateway et doit être configuré de manière cohérente.
-- La sécurité fine par rôles n’est pas implémentée.
+- La Gateway vérifie le JWT, mais les services métier ne le valident pas eux-mêmes. Les ports de ces services sont publiés par Docker Compose ; un appel direct les contourne. `user-service` utilise actuellement `permitAll()` : ses opérations de modification et de suppression ne disposent pas d’un contrôle d’autorisation propre au service.
+- Le jeton `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne de récupération du hash utilisée par l’authentification ; il ne remplace pas l’authentification ni l’autorisation des autres endpoints interservices.
+- Le JWT utilise un secret symétrique partagé par `auth-service` et la Gateway. Ils doivent recevoir la même valeur via `JWT_SECRET` ; la valeur de développement fournie dans les fichiers de configuration ne doit pas être utilisée en production. Les secrets ne doivent pas être commités.
+- La sécurité fine par rôles et les contrôles de propriété (par exemple, empêcher un utilisateur de modifier ou supprimer le compte d’un autre) ne sont pas implémentés.
+- Les DTO publics de `user-service` excluent le hash du mot de passe ; la route interne d’authentification ne le retourne qu’avec le jeton de service attendu.
 - L’envoi d’un courriel dépend de la configuration SMTP ; il n’est pas nécessaire au calcul du score.
