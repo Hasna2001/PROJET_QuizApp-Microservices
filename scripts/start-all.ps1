@@ -6,6 +6,11 @@
 $root = Split-Path -Parent $PSScriptRoot
 $ErrorActionPreference = "Stop"
 
+if (-not $env:USER_SERVICE_INTERNAL_TOKEN) {
+    Write-Host "USER_SERVICE_INTERNAL_TOKEN doit etre defini dans cette session PowerShell." -ForegroundColor Red
+    exit 1
+}
+
 # --- JAVA_HOME ---
 if (-not $env:JAVA_HOME) { $env:JAVA_HOME = "C:\Program Files\Java\jdk-25" }
 if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {

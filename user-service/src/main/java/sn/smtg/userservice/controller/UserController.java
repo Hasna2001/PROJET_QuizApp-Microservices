@@ -1,13 +1,17 @@
 package sn.smtg.userservice.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sn.smtg.userservice.dto.UserAuthDTO;
 import sn.smtg.userservice.dto.UserDTO;
 import sn.smtg.userservice.dto.UserPublicDTO;
-import sn.smtg.userservice.entity.User;
 import sn.smtg.userservice.service.UserService;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 @RestController
@@ -16,6 +20,9 @@ public class UserController {
 
     @Autowired
     UserService userService;
+
+    @Value("${user.service.internal-token:}")
+    private String internalServiceToken;
 
     @PostMapping("inscrire")
     public ResponseEntity<String> inscrire(@RequestBody UserDTO userDTO) {
@@ -28,8 +35,21 @@ public class UserController {
     }
 
     @GetMapping("email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserPublicDTO> getUserByEmail(@PathVariable String email) {
         return userService.getUserByEmail(email);
+    }
+
+    @GetMapping("internal/email/{email}")
+    public ResponseEntity<UserAuthDTO> getUserForAuthentication(
+            @PathVariable String email,
+            @RequestHeader(value = "X-Internal-Service-Token", required = false) String serviceToken) {
+        if (internalServiceToken.isBlank() || serviceToken == null
+                || !MessageDigest.isEqual(
+                        internalServiceToken.getBytes(StandardCharsets.UTF_8),
+                        serviceToken.getBytes(StandardCharsets.UTF_8))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return userService.getUserForAuthenticationByEmail(email);
     }
 
     @GetMapping("all")

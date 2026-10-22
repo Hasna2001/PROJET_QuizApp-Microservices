@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import sn.smtg.userservice.dto.UserAuthDTO;
 import sn.smtg.userservice.dto.UserDTO;
 import sn.smtg.userservice.dto.UserPublicDTO;
 import sn.smtg.userservice.entity.User;
@@ -51,9 +52,16 @@ public class UserService {
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    public ResponseEntity<User> getUserByEmail(String email) {
+    public ResponseEntity<UserPublicDTO> getUserByEmail(String email) {
         return userRepo.findByEmail(email)
-                .map(u -> new ResponseEntity<>(u, HttpStatus.OK))
+                .map(u -> new ResponseEntity<>(toPublic(u), HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    public ResponseEntity<UserAuthDTO> getUserForAuthenticationByEmail(String email) {
+        return userRepo.findByEmail(email)
+                .map(u -> new ResponseEntity<>(
+                        new UserAuthDTO(u.getId(), u.getEmail(), u.getMotDePasse()), HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 

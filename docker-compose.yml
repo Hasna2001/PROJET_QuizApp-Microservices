@@ -47,6 +47,7 @@ services:
     environment:
       <<: *eureka-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?createDatabaseIfNotExist=true&serverTimezone=UTC
+      USER_SERVICE_INTERNAL_TOKEN: ${USER_SERVICE_INTERNAL_TOKEN:?Set USER_SERVICE_INTERNAL_TOKEN in your environment}
     ports: ["8091:8091"]
     networks: [quizapp-net]
     restart: on-failure
@@ -62,6 +63,7 @@ services:
     environment:
       <<: *eureka-env
       JWT_SECRET: ${JWT_SECRET}
+      USER_SERVICE_INTERNAL_TOKEN: ${USER_SERVICE_INTERNAL_TOKEN:?Set USER_SERVICE_INTERNAL_TOKEN in your environment}
     ports: ["8093:8093"]
     networks: [quizapp-net]
     restart: on-failure

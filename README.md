@@ -42,6 +42,7 @@ QuizApp est une application backend de quiz organisée en microservices Spring B
 - JDK 25 et Maven 3.9 ou ultérieur.
 - MySQL démarré et accessible sur `localhost:3306`.
 - Un compte MySQL `root` dont le mot de passe correspond à celui défini dans les fichiers `application.properties` (valeur du projet : `rootroot`).
+- La variable `USER_SERVICE_INTERNAL_TOKEN` définie dans la session PowerShell qui lance les services.
 
 Le port local configuré par défaut pour MySQL est **3306**. Le port **3307** est uniquement le port publié par Docker Compose sur la machine hôte ; les conteneurs communiquent entre eux sur le port 3306.
 
@@ -53,7 +54,7 @@ Depuis la racine du projet, dans PowerShell :
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Ouvrez `.env` et définissez un `JWT_SECRET` propre à votre environnement (la valeur de l’exemple est réservée au développement). Pour activer les courriels, renseignez `GMAIL_USERNAME` et `GMAIL_APP_PASSWORD` avec un mot de passe d’application Gmail. Ces valeurs sont facultatives pour le démarrage et le parcours du quiz.
+Ouvrez `.env` et définissez des valeurs longues et aléatoires pour `JWT_SECRET` et `USER_SERVICE_INTERNAL_TOKEN` (les valeurs de l’exemple sont réservées au développement). Pour activer les courriels, renseignez `GMAIL_USERNAME` et `GMAIL_APP_PASSWORD` avec un mot de passe d’application Gmail. Ces valeurs sont facultatives pour le démarrage et le parcours du quiz.
 
 ```powershell
 docker compose -p quizapp-microservices up --build -d
@@ -89,9 +90,12 @@ docker compose -p quizapp-microservices down -v
 
 ## 5. Démarrage local sous Windows
 
-Vérifiez d’abord que MySQL écoute sur `localhost:3306`, puis exécutez le script depuis la racine du projet :
+Vérifiez d’abord que MySQL écoute sur `localhost:3306`. Définissez ensuite un jeton interne aléatoire dans la session PowerShell qui lancera les services, puis exécutez le script depuis la racine du projet :
 
 ```powershell
+$bytes = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$env:USER_SERVICE_INTERNAL_TOKEN = [Convert]::ToBase64String($bytes)
 powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
 ```
 
