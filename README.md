@@ -355,9 +355,12 @@ Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers loca
 ## 11. Portée et limites connues
 
 - Les appels interservices sont synchrones ; Resilience4j et les mécanismes de reprise ne sont pas configurés.
-- La Gateway vérifie le JWT, mais les services métier ne le valident pas eux-mêmes. Les ports de ces services sont publiés par Docker Compose ; un appel direct les contourne. `user-service` utilise actuellement `permitAll()` : ses opérations de modification et de suppression ne disposent pas d’un contrôle d’autorisation propre au service.
-- Le jeton `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne de récupération du hash utilisée par l’authentification ; il ne remplace pas l’authentification ni l’autorisation des autres endpoints interservices.
-- Le JWT utilise un secret symétrique partagé par `auth-service` et la Gateway. Ils doivent recevoir la même valeur via `JWT_SECRET` ; la valeur de développement fournie dans les fichiers de configuration ne doit pas être utilisée en production. Les secrets ne doivent pas être commités.
-- La sécurité fine par rôles et les contrôles de propriété (par exemple, empêcher un utilisateur de modifier ou supprimer le compte d’un autre) ne sont pas implémentés.
+- La Gateway vérifie le JWT, mais les services métier ne le valident pas eux-mêmes. Docker Compose publie leurs ports sur l’hôte ; un appel direct à ces ports contourne donc le contrôle de la Gateway.
+- Dans `user-service`, Spring Security autorise actuellement toutes les requêtes (`permitAll()`). Les opérations de consultation, de modification et de suppression ne disposent pas d’un contrôle d’autorisation propre au service ; en particulier, la publication du port 8091 permet de contourner la Gateway.
+- `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne qui fournit les données d’authentification, notamment le hash du mot de passe. Il ne remplace pas l’authentification ni l’autorisation des autres routes interservices.
 - Les DTO publics de `user-service` excluent le hash du mot de passe ; la route interne d’authentification ne le retourne qu’avec le jeton de service attendu.
-- L’envoi d’un courriel dépend de la configuration SMTP ; il n’est pas nécessaire au calcul du score.
+- La sécurité fine par rôles et les contrôles de propriété ne sont pas implémentés : un utilisateur n’est pas empêché par une vérification dédiée de modifier ou supprimer le compte d’un autre.
+- Lors de la soumission d’un quiz, `quiz-service` accepte `utilisateurId` comme paramètre sans le comparer à l’identité du JWT. Les soumissions répétées ne sont pas empêchées.
+- `POST /quiz-service/quiz/creer` renvoie `201 Created` avec le texte `Success`, sans retourner l’identifiant du quiz. Si aucune question n’est trouvée pour la catégorie demandée, cette implémentation renvoie `404`.
+- Le JWT utilise un secret symétrique partagé par `auth-service` et la Gateway. Ils doivent recevoir la même valeur via `JWT_SECRET` ; les valeurs de développement ne doivent pas être utilisées en production. Les secrets réels doivent être fournis de manière sécurisée et ne doivent pas être commités.
+- L’envoi d’un courriel dépend de la configuration SMTP. Son échec est intercepté et ne bloque pas, à lui seul, l’enregistrement de la gratification. En revanche, si l’enregistrement de la gratification échoue, `quiz-service` intercepte aussi l’erreur et peut tout de même retourner le score.
