@@ -265,6 +265,8 @@ $headers = @{ Authorization = "Bearer $token" }
 
 ### Création et consultation d’un quiz
 
+Dans cette implémentation, si aucune question n’est trouvée pour la catégorie demandée, la création du quiz renvoie `404` avec un message indiquant qu’aucune question n’est disponible.
+
 ```powershell
 $quiz = @{
     categorie = "Java"
@@ -284,6 +286,8 @@ $questions
 ### Soumission et classement
 
 Chaque réponse contient l’identifiant de la **question** (`id`) et le texte de la réponse (`response`). Reprenez les identifiants et les choix exacts renvoyés par l’API ; l’identifiant du quiz dans le chemin et l’identifiant de l’utilisateur dans la query string doivent également être ceux de votre session.
+
+Dans le calcul du score actuel, un identifiant de question inconnu est ignoré : il ne contribue pas au score et ne provoque pas à lui seul une erreur `500`. Le service de questions vérifie la présence de la question avant de comparer la réponse.
 
 La création renvoie actuellement le texte `Success`, pas l’identifiant du quiz. Dans une base neuve, le premier quiz porte généralement l’identifiant `1`. Si la base contient déjà des quiz, repérez l’identifiant dans la table `quiz` de `quizdb` avant les appels de consultation et de soumission.
 
