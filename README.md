@@ -354,15 +354,11 @@ Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers loca
 
 ## 11. Portée et limites connues
 
-- Les appels interservices sont synchrones ; Resilience4j et les mécanismes de reprise ne sont pas configurés.
-- La Gateway vérifie le JWT, mais les services métier ne le valident pas eux-mêmes. Docker Compose publie leurs ports sur l’hôte ; un appel direct à ces ports contourne donc le contrôle de la Gateway.
-- Dans `user-service`, Spring Security autorise actuellement toutes les requêtes (`permitAll()`). Les opérations de consultation, de modification et de suppression ne disposent pas d’un contrôle d’autorisation propre au service ; en particulier, la publication du port 8091 permet de contourner la Gateway.
-- La classe principale de `user-service` porte `@EnableFeignClients`, avec le starter OpenFeign dans ses dépendances, conformément à la configuration décrite dans le support. Cette annotation active la détection des clients Feign, mais aucun client Feign n’est actuellement déclaré dans ce service.
-- `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne qui fournit les données d’authentification, notamment le hash du mot de passe. Il ne remplace pas l’authentification ni l’autorisation des autres routes interservices.
-- Les DTO publics de `user-service` excluent le hash du mot de passe ; la route interne d’authentification ne le retourne qu’avec le jeton de service attendu.
-- La sécurité fine par rôles et les contrôles de propriété ne sont pas implémentés : un utilisateur n’est pas empêché par une vérification dédiée de modifier ou supprimer le compte d’un autre.
-- Lors de la soumission d’un quiz, `quiz-service` accepte `utilisateurId` comme paramètre sans le comparer à l’identité du JWT. Les soumissions répétées ne sont pas empêchées.
-- `POST /quiz-service/quiz/creer` renvoie `201 Created` avec le texte `Success`, sans retourner l’identifiant du quiz. Si aucune question n’est trouvée pour la catégorie demandée, cette implémentation renvoie `404`.
-- Le JWT utilise un secret symétrique partagé par `auth-service` et la Gateway. Ils doivent recevoir la même valeur via `JWT_SECRET` ; les valeurs de développement ne doivent pas être utilisées en production. Les secrets réels doivent être fournis de manière sécurisée et ne doivent pas être commités.
-- **Maintenance :** plusieurs services définissent leur propre DTO `UserWrapper`, notamment `auth-service`. Il convient d’évaluer si les champs communs doivent être factorisés dans un contrat partagé, tout en conservant la séparation des données sensibles comme le hash du mot de passe. Le secret JWT est répété dans les configurations d’`auth-service` et de la Gateway ; il faut centraliser sa fourniture via une variable d’environnement sécurisée et éviter les valeurs sensibles par défaut dans les fichiers versionnés.
-- L’envoi d’un courriel dépend de la configuration SMTP. Son échec est intercepté et ne bloque pas, à lui seul, l’enregistrement de la gratification. En revanche, si l’enregistrement de la gratification échoue, `quiz-service` intercepte aussi l’erreur et peut tout de même retourner le score.
+- Les appels interservices sont synchrones ; aucun mécanisme de reprise ni disjoncteur Resilience4j n’est configuré.
+- La Gateway vérifie le JWT, mais les services ne le valident pas eux-mêmes. Leurs ports étant publiés par Docker Compose, un appel direct contourne la Gateway. De plus, `user-service` utilise `permitAll()` ; ses opérations ne disposent pas d’autorisation propre au service.
+- `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne qui retourne les données d’authentification. La classe principale de `user-service` active aussi la détection Feign avec `@EnableFeignClients`, mais ce service ne déclare aucun client Feign.
+- Plusieurs services possèdent leur propre DTO `UserWrapper` ; une factorisation des champs communs peut être étudiée sans exposer le hash du mot de passe aux services qui n’en ont pas besoin.
+- À la soumission, `quiz-service` accepte `utilisateurId` sans le comparer à l’identité du JWT et n’empêche pas les soumissions répétées. La sécurité par rôles et les contrôles de propriété des comptes ne sont pas implémentés.
+- `POST /quiz-service/quiz/creer` répond `201 Created` avec `Success`, sans identifiant de quiz ; si aucune question n’est disponible, cette implémentation répond `404`.
+- Le secret JWT doit être identique dans `auth-service` et la Gateway. Remplacez les valeurs de développement par une variable d’environnement sécurisée ; ne versionnez pas de secrets réels.
+- L’e-mail dépend de la configuration SMTP. Son échec n’empêche pas l’enregistrement de la gratification ; si cet enregistrement échoue, `quiz-service` peut néanmoins retourner le score.
