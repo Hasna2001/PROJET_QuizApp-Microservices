@@ -2,9 +2,9 @@
 
 ## 1. Présentation
 
-QuizApp est une application backend de quiz organisée en microservices Spring Boot. Les services se découvrent avec Eureka, les requêtes externes passent par une API Gateway et MySQL conserve les comptes, les questions, les quiz et les gratifications.
+QuizApp est une application de quiz organisée en microservices Spring Boot. Les services se découvrent avec Eureka, les requêtes externes passent par une API Gateway et MySQL conserve les comptes, les questions, les quiz et les gratifications. Une interface étudiante en HTML, CSS et JavaScript est servie par la Gateway.
 
-**Ce dépôt ne contient pas d’interface graphique frontend.** `http://localhost:8761` ouvre le tableau de bord Eureka. `http://localhost:8765` affiche les informations de la Gateway au format JSON ; ce n’est pas une interface graphique. Pour utiliser l’application, appelez les chemins d’API ci-dessous avec un client HTTP (PowerShell, curl ou Postman). Un navigateur seul ne peut pas envoyer le jeton requis ni les corps JSON des requêtes `POST`.
+Après le démarrage, ouvrez `http://localhost:8765/` pour vous inscrire ou vous connecter, choisir un quiz, répondre aux questions et consulter votre score et le classement. `http://localhost:8761` ouvre le tableau de bord Eureka et `http://localhost:8765/api` affiche les informations de l’API Gateway. Les API restent accessibles avec un client HTTP (PowerShell, curl ou Postman).
 
 ## 2. Architecture et responsabilités
 
@@ -61,13 +61,14 @@ docker compose -p quizapp-microservices up --build -d
 docker compose -p quizapp-microservices ps
 ```
 
-La première compilation peut prendre quelques minutes. Au démarrage, la Gateway peut aussi avoir besoin de quelques minutes pour terminer son initialisation. Vérifiez qu’elle répond avant de commencer le parcours API :
+La première compilation peut prendre quelques minutes. Au démarrage, la Gateway peut aussi avoir besoin de quelques minutes pour terminer son initialisation. Vérifiez qu’elle répond, puis ouvrez l’interface étudiante dans votre navigateur :
 
 ```powershell
-Invoke-RestMethod http://localhost:8765/
+Invoke-RestMethod http://localhost:8765/api
+Start-Process http://localhost:8765/
 ```
 
-Attendez que les services apparaissent dans [Eureka](http://localhost:8761). MySQL doit être sain et les microservices doivent avoir démarré et s’être enregistrés avant que la Gateway puisse les router. Pour suivre les journaux, appuyez sur `Ctrl+C` pour quitter l’affichage des journaux ; cela n’arrête pas le conteneur :
+Attendez que les services apparaissent dans [Eureka](http://localhost:8761). MySQL doit être sain et les microservices doivent avoir démarré et s’être enregistrés avant que la Gateway puisse les router. L’interface et ses fichiers statiques sont servis par la Gateway ; aucun serveur frontend séparé ni accès CORS n’est nécessaire. Pour suivre les journaux, appuyez sur `Ctrl+C` pour quitter l’affichage des journaux ; cela n’arrête pas le conteneur :
 
 ```powershell
 docker compose -p quizapp-microservices logs -f api-gateway
@@ -122,6 +123,8 @@ Il faut que Maven soit accessible dans `PATH` ou installé à l’un des emplace
 
 | Méthode | Chemin via la Gateway | Accès | Description |
 |---|---|---|---|
+| `GET` | `/` | Public | Interface web des étudiants |
+| `GET` | `/api` | Public | Informations de l’API Gateway |
 | `POST` | `/user-service/user/inscrire` | Public | Inscrire un utilisateur |
 | `POST` | `/auth-service/auth/login` | Public | Se connecter et obtenir le JWT |
 | `GET` | `/user-service/user/all` | JWT | Lister les utilisateurs |
@@ -150,8 +153,6 @@ Il faut que Maven soit accessible dans `PATH` ou installé à l’un des emplace
 | `GET` | `/leaderboard-service/leaderboard/rang/{userId}` | JWT | Obtenir le rang d’un utilisateur |
 
 Les routes marquées **Interne** sont utilisées par les échanges entre microservices ; elles ne sont pas nécessaires pour le parcours utilisateur normal.
-
-**Limite de sécurité importante :** la mention « JWT » ci-dessus signifie que la requête est contrôlée lorsqu’elle passe par la Gateway. Dans `docker-compose.yml`, les ports des services métier sont également publiés sur l’hôte ; un appel direct à ces ports contourne donc ce contrôle. En particulier, `user-service` autorise actuellement toutes les requêtes dans sa configuration Spring Security. Ne considérez pas les opérations sensibles comme protégées contre un accès direct.
 
 ## 7. Exemple de parcours HTTP sous PowerShell
 
@@ -195,11 +196,9 @@ $quiz = @{
     titre = "Quiz Java"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Method Post -Uri "$base/quiz-service/quiz/creer" `
+$quizId = [int](Invoke-RestMethod -Method Post -Uri "$base/quiz-service/quiz/creer" `
     -Headers $headers -ContentType "application/json" -Body $quiz
-
-# La création renvoie "Success" et non l'identifiant du quiz.
-$quizId = [int](docker exec mysql mysql -N -uroot -prootroot quizdb -e "SELECT MAX(id) FROM quiz")
+)
 $questions = Invoke-RestMethod -Method Get -Uri "$base/quiz-service/quiz/get/$quizId" `
     -Headers $headers
 
@@ -289,7 +288,7 @@ Chaque réponse contient l’identifiant de la **question** (`id`) et le texte d
 
 Dans le calcul du score actuel, un identifiant de question inconnu est ignoré : il ne contribue pas au score et ne provoque pas à lui seul une erreur `500`. Le service de questions vérifie la présence de la question avant de comparer la réponse.
 
-La création renvoie actuellement le texte `Success`, pas l’identifiant du quiz. Dans une base neuve, le premier quiz porte généralement l’identifiant `1`. Si la base contient déjà des quiz, repérez l’identifiant dans la table `quiz` de `quizdb` avant les appels de consultation et de soumission.
+La création renvoie `201 Created` avec l’identifiant du quiz créé ; utilisez cette valeur pour charger les questions puis soumettre les réponses.
 
 ```powershell
 $reponses = @(
@@ -359,6 +358,7 @@ Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers loca
 - `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne qui retourne les données d’authentification. La classe principale de `user-service` active aussi la détection Feign avec `@EnableFeignClients`, mais ce service ne déclare aucun client Feign.
 - Plusieurs services possèdent leur propre DTO `UserWrapper` ; une factorisation des champs communs peut être étudiée sans exposer le hash du mot de passe aux services qui n’en ont pas besoin.
 - À la soumission, `quiz-service` accepte `utilisateurId` sans le comparer à l’identité du JWT et n’empêche pas les soumissions répétées. La sécurité par rôles et les contrôles de propriété des comptes ne sont pas implémentés.
-- `POST /quiz-service/quiz/creer` répond `201 Created` avec `Success`, sans identifiant de quiz ; si aucune question n’est disponible, cette implémentation répond `404`.
+- `POST /quiz-service/quiz/creer` répond `201 Created` avec l’identifiant du quiz créé ; si aucune question n’est disponible, cette implémentation répond `404`.
+- L’interface bloque les doubles clics et retire le quiz de l’écran après sa soumission, mais la protection anti-répétition n’est pas encore garantie par le backend.
 - Le secret JWT doit être identique dans `auth-service` et la Gateway. Remplacez les valeurs de développement par une variable d’environnement sécurisée ; ne versionnez pas de secrets réels.
 - L’e-mail dépend de la configuration SMTP. Son échec n’empêche pas l’enregistrement de la gratification ; si cet enregistrement échoue, `quiz-service` peut néanmoins retourner le score.

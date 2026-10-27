@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10172a">
+  <title>QuizApp — Révise et progresse</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="QuizApp, accueil">
+      <span class="brand-mark" aria-hidden="true">Q</span>
+      <span>quiz<span class="brand-accent">app</span></span>
+    </a>
+    <nav class="top-nav" aria-label="Navigation principale">
+      <a href="#quiz">Passer aux quiz</a>
+      <a href="#classement">Classement</a>
+      <button id="logout-button" class="button button-quiet hidden" type="button">Déconnexion</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> ARCHITECTURE ORIENTÉE SERVICES</p>
+        <h1>Apprends. Joue.<br><span>Progresse.</span></h1>
+        <p class="hero-text">Teste tes connaissances, découvre ton score et retrouve ta place parmi les étudiants.</p>
+      </div>
+    </section>
+
+    <p id="notice" class="notice hidden" role="status" aria-live="polite"></p>
+
+    <section id="auth-panel" class="auth-card panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ESPACE ÉTUDIANT</p>
+          <h2 id="auth-title">Content de te revoir</h2>
+        </div>
+        <span class="heading-icon" aria-hidden="true">↗</span>
+      </div>
+      <div class="auth-switch" role="group" aria-label="Choisir une action">
+        <button id="show-login" class="switch-button is-active" type="button">Connexion</button>
+        <button id="show-register" class="switch-button" type="button">Inscription</button>
+      </div>
+
+      <form id="login-form" class="form-stack">
+        <label for="login-email">Adresse e-mail</label>
+        <input id="login-email" name="email" type="email" autocomplete="email" placeholder="toi@exemple.com" required>
+        <label for="login-password">Mot de passe</label>
+        <input id="login-password" name="motDePasse" type="password" autocomplete="current-password" required>
+        <button class="button button-primary full-width" type="submit">Se connecter <span aria-hidden="true">→</span></button>
+      </form>
+
+      <form id="register-form" class="form-stack hidden">
+        <div class="form-row">
+          <div>
+            <label for="register-first-name">Prénom</label>
+            <input id="register-first-name" name="prenom" autocomplete="given-name" required>
+          </div>
+          <div>
+            <label for="register-last-name">Nom</label>
+            <input id="register-last-name" name="nom" autocomplete="family-name" required>
+          </div>
+        </div>
+        <label for="register-email">Adresse e-mail</label>
+        <input id="register-email" name="email" type="email" autocomplete="email" placeholder="toi@exemple.com" required>
+        <label for="register-password">Mot de passe</label>
+        <input id="register-password" name="motDePasse" type="password" autocomplete="new-password" minlength="6" required>
+        <button class="button button-primary full-width" type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="fine-print">Tes données de session restent dans cet onglet et sont supprimées à la déconnexion.</p>
+    </section>
+
+    <section id="app-panel" class="hidden">
+      <div class="welcome-row">
+        <div>
+          <p class="eyebrow">TON ESPACE</p>
+          <h2>Salut <span id="student-name">étudiant</span> <span aria-hidden="true">✦</span></h2>
+        </div>
+        <div class="welcome-badge"><span aria-hidden="true">◎</span> Prêt à relever le défi ?</div>
+      </div>
+
+      <div class="content-grid">
+        <section id="quiz" class="panel quiz-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">À TOI DE JOUER</p>
+              <h2>Choisis ton quiz</h2>
+            </div>
+            <span class="heading-icon" aria-hidden="true">✳</span>
+          </div>
+          <p class="muted">Sélectionne un thème et un nombre de questions. Tu peux aussi saisir une catégorie disponible dans la banque de cours.</p>
+          <form id="quiz-form" class="form-stack">
+            <label for="quiz-category">Catégorie</label>
+            <input id="quiz-category" name="categorie" list="category-options" value="Java" required>
+            <datalist id="category-options">
+              <option value="Java"></option>
+              <option value="Python"></option>
+            </datalist>
+            <label for="quiz-count">Nombre de questions</label>
+            <select id="quiz-count" name="numQuestions">
+              <option value="5">5 questions</option>
+              <option value="10">10 questions</option>
+              <option value="15">15 questions</option>
+            </select>
+            <label for="quiz-title">Nom du quiz</label>
+            <input id="quiz-title" name="titre" value="Quiz Java" maxlength="100" required>
+            <button id="create-quiz-button" class="button button-primary full-width" type="submit">Commencer le quiz <span aria-hidden="true">→</span></button>
+          </form>
+        </section>
+
+        <section class="panel leaderboard-panel" id="classement">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">LES MEILLEURS</p>
+              <h2>Classement</h2>
+            </div>
+            <span class="heading-icon" aria-hidden="true">♛</span>
+          </div>
+          <div id="leaderboard" class="leaderboard-list">
+            <p class="muted">Chargement du classement…</p>
+          </div>
+        </section>
+      </div>
+
+      <section id="questions-panel" class="panel questions-panel hidden">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow" id="question-category">QUIZ</p>
+            <h2 id="question-title">Questions</h2>
+          </div>
+          <span id="question-progress" class="progress-label"></span>
+        </div>
+        <form id="answers-form" class="form-stack"></form>
+      </section>
+
+      <section id="result-panel" class="panel result-panel hidden" aria-live="polite">
+        <div class="result-icon" aria-hidden="true">✓</div>
+        <p class="eyebrow">QUIZ TERMINÉ</p>
+        <h2>Bien joué, <span id="result-name">étudiant</span> !</h2>
+        <p class="result-score"><strong id="score-value">0</strong><span id="score-total">/ 0</span></p>
+        <p id="result-message" class="muted"></p>
+        <div class="result-stats">
+          <div><span class="stat-label">Tes points</span><strong id="points-value">—</strong></div>
+          <div><span class="stat-label">Ton rang</span><strong id="rank-value">—</strong></div>
+        </div>
+        <button id="new-quiz-button" class="button button-primary" type="button">Choisir un autre quiz <span aria-hidden="true">→</span></button>
+      </section>
+    </section>
+  </main>
+
+  <footer>
+    <span>QuizApp <span aria-hidden="true">·</span> Architecture Orientée Services</span>
+    <a href="http://localhost:8765/api">API Gateway</a>
+  </footer>
+</body>
+</html>

@@ -35,8 +35,8 @@ public class QuizService {
         Quiz quiz = new Quiz();
         quiz.setTitre(titre);
         quiz.setQuestionsIds(questions);
-        quizRepo.save(quiz);
-        return new ResponseEntity<>("Success", HttpStatus.CREATED);
+        Quiz quizCree = quizRepo.save(quiz);
+        return new ResponseEntity<>(quizCree.getId().toString(), HttpStatus.CREATED);
     }
 
     public ResponseEntity<List<QuestionWrapper>> questionsQuiz(Integer id) {

@@ -23,7 +23,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final List<String> cheminsPublics = List.of(
             "/auth-service/auth/login",
-            "/user-service/user/inscrire"
+            "/user-service/user/inscrire",
+            "/index.html",
+            "/api",
+            "/assets/"
     );
 
     @Override
