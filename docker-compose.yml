@@ -24,6 +24,7 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports: ["3307:3306"]   # 3307 cote hote pour ne pas entrer en conflit avec un MySQL local
     networks: [quizapp-net]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootroot"]
       interval: 10s
@@ -35,6 +36,7 @@ services:
     container_name: register-service
     ports: ["8761:8761"]
     networks: [quizapp-net]
+    restart: unless-stopped
 
   user-service:
     build: ./user-service
