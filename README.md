@@ -331,16 +331,14 @@ Au premier démarrage de `question-service`, 20 questions de démonstration sont
 
 | Symptôme | Cause probable | Vérification / action |
 |---|---|---|
-| Eureka répond, mais les routes Gateway renvoient `404` | Le microservice ciblé n’a pas démarré ou n’est pas enregistré dans Eureka ; le chemin ou son préfixe est incorrect | Vérifier le service dans [Eureka](http://localhost:8761), consulter ses journaux et utiliser le chemin complet `/identifiant-service/chemin-du-contrôleur` |
-| `404` en ouvrant `http://localhost:8765/` | La Gateway n’a pas été reconstruite ou redémarrée | Avec Docker : exécuter `docker compose -p quizapp-microservices up --build -d api-gateway`, puis réessayer |
+| `404` sur une route ou à l’accueil | Service non enregistré, chemin incorrect ou Gateway à reconstruire | Vérifier [Eureka](http://localhost:8761) et le chemin ; reconstruire la Gateway si nécessaire |
 | `401 Unauthorized` | Jeton absent, invalide ou envoyé sans le préfixe `Bearer ` | Se reconnecter, puis envoyer `Authorization: Bearer <JWT>` |
-| `405 Method Not Allowed` | La route existe, mais la méthode HTTP n’est pas celle attendue | Respecter la méthode indiquée dans le tableau des API (`GET`, `POST`, etc.) |
-| Service de données en échec au démarrage local | MySQL absent, inaccessible ou identifiants différents | Vérifier `localhost:3306`, le compte et le mot de passe MySQL dans les propriétés du service |
-| `Access denied` ou `Unknown database` | Identifiants MySQL incorrects ou initialisation de base échouée | Consulter les journaux MySQL et vérifier le volume/droits de l’utilisateur |
-| Création de quiz sans questions disponibles | Catégorie inexistante ou base de questions non initialisée | Vérifier que `question-service` est enregistré et que ses questions existent |
-| Courriel non envoyé | Paramètres SMTP absents ou incorrects | Le résultat du quiz reste affiché dans QuizApp avec une notification à l’écran ; pour recevoir aussi un courriel, renseigner un mot de passe d’application valide dans `.env` |
+| `500 Internal Server Error` lors de la connexion | `USER_SERVICE_INTERNAL_TOKEN` absent ou différent entre `auth-service` et `user-service` | Définir le même jeton dans `USER_SERVICE_INTERNAL_TOKEN` du fichier `.env`, puis recréer les deux services avec `docker compose -p quizapp-microservices up -d --force-recreate user-service auth-service` |
+| `405 Method Not Allowed` | Méthode HTTP incorrecte | Utiliser la méthode indiquée dans le tableau des API |
+| Erreur MySQL (`Access denied`, `Unknown database`) | MySQL inaccessible ou configuration incorrecte | Vérifier MySQL, ses identifiants et les journaux du service concerné |
+| Quiz sans questions ou courriel non envoyé | Questions absentes ou paramètres SMTP invalides | Vérifier `question-service` et les paramètres Gmail dans `.env` ; le score reste affiché dans QuizApp |
 
-Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers locaux utilisent `localhost:3306`, tandis que les conteneurs accèdent à MySQL par `mysql:3306`. Docker publie le port conteneur 3306 sur `localhost:3307`.
+Après un quiz, QuizApp affiche le score même si l’e-mail échoue. En local, MySQL utilise `localhost:3306` ; dans Docker, les services utilisent `mysql:3306` (port hôte : `3307`).
 
 ## 10. Technologies
 
