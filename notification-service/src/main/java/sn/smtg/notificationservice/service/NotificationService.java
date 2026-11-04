@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import sn.smtg.notificationservice.dto.NotificationRequest;
+import sn.smtg.notificationservice.dto.PasswordResetEmailRequest;
 import sn.smtg.notificationservice.dto.UserWrapper;
 import sn.smtg.notificationservice.feign.UserInterface;
 
@@ -31,6 +32,8 @@ public class NotificationService {
             UserWrapper user = userResponse.getBody();
 
             emailService.envoyerResultatQuiz(user, request.getQuizId(), request.getScore(), request.getPoints());
+            logger.info("Notification envoyée pour l'utilisateur {} et le quiz {}",
+                    request.getUtilisateurId(), request.getQuizId());
 
             return new ResponseEntity<>("Notification envoyée à " + user.getEmail(), HttpStatus.OK);
         } catch (FeignException.NotFound e) {
@@ -40,6 +43,18 @@ public class NotificationService {
                     request.getUtilisateurId(), request.getQuizId(), e);
             return new ResponseEntity<>("Erreur lors de l'envoi de la notification : " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<String> envoyerLienReinitialisation(PasswordResetEmailRequest request) {
+        try {
+            emailService.envoyerLienReinitialisation(request.email(), request.resetUrl());
+            logger.info("Lien de réinitialisation envoyé.");
+            return ResponseEntity.ok("Lien de réinitialisation envoyé.");
+        } catch (Exception e) {
+            logger.error("Échec de l'envoi du lien de réinitialisation.", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Échec de l'envoi du lien de réinitialisation.");
         }
     }
 }

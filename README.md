@@ -54,12 +54,26 @@ Depuis la racine du projet, dans PowerShell :
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Ouvrez `.env` et définissez des valeurs longues et aléatoires pour `JWT_SECRET` et `USER_SERVICE_INTERNAL_TOKEN` (les valeurs de l’exemple sont réservées au développement). Pour activer les courriels, renseignez `GMAIL_USERNAME` et `GMAIL_APP_PASSWORD` avec un mot de passe d’application Gmail. Ces valeurs sont facultatives pour le démarrage et le parcours du quiz.
+Ouvrez `.env` et définissez des valeurs longues et aléatoires pour `JWT_SECRET` et `USER_SERVICE_INTERNAL_TOKEN` (les valeurs de l’exemple sont réservées au développement). Configurez `APP_PUBLIC_URL` avec l’adresse à laquelle l’application est accessible (par défaut `http://localhost:8765`). Pour activer les courriels, renseignez `GMAIL_USERNAME` avec l’adresse Gmail d’envoi et `GMAIL_APP_PASSWORD` avec un mot de passe d’application Google valide (pas le mot de passe habituel du compte). Ne partagez et ne versionnez jamais ce mot de passe. Les courriels de résultat et de réinitialisation sont envoyés à l’adresse associée au compte QuizApp.
 
 ```powershell
 docker compose -p quizapp-microservices up --build -d
 docker compose -p quizapp-microservices ps
 ```
+
+Après avoir modifié les paramètres Gmail dans `.env`, recréez le service pour les appliquer :
+
+```powershell
+docker compose -p quizapp-microservices up -d --force-recreate notification-service
+```
+
+Terminez un quiz dans l’application pour déclencher l’envoi. Pour vérifier le résultat ou diagnostiquer une erreur SMTP, consultez les journaux :
+
+```powershell
+docker compose -p quizapp-microservices logs --tail 100 notification-service
+```
+
+Pour réinitialiser un mot de passe oublié, depuis l’écran de connexion, clique sur **Mot de passe oublié ?**, saisis l’adresse du compte QuizApp et suis le lien reçu par e-mail dans les 30 minutes. Le lien est à usage unique. Cette fonction dépend de la configuration SMTP Gmail ci-dessus.
 
 La première compilation peut prendre quelques minutes. Au démarrage, la Gateway peut aussi avoir besoin de quelques minutes pour terminer son initialisation. Vérifiez qu’elle répond, puis ouvrez l’interface étudiante dans votre navigateur :
 

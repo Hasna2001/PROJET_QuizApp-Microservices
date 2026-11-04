@@ -114,6 +114,8 @@ h2 { margin-bottom: 0; font-size: 25px; }
 .button-quiet { min-height: 36px; border: 1px solid var(--border); background: transparent; color: var(--text); }
 .full-width { width: 100%; margin-top: 12px; }
 .fine-print { margin: 19px 0 0; color: #8290a8; font-size: 12px; line-height: 1.5; text-align: center; }
+.form-link { align-self: center; padding: 8px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 13px; }
+.form-link:hover { text-decoration: underline; }
 .muted { color: var(--muted); font-size: 14px; line-height: 1.65; }
 
 .notice { padding: 13px 16px; margin: 0 auto 20px; border: 1px solid rgba(194, 249, 112, .25); border-radius: 10px; background: rgba(194, 249, 112, .08); color: #dff9bd; font-size: 14px; }

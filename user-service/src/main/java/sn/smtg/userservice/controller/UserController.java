@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import sn.smtg.userservice.dto.PasswordResetCompletionRequest;
+import sn.smtg.userservice.dto.PasswordResetTokenRequest;
 import sn.smtg.userservice.dto.UserAuthDTO;
 import sn.smtg.userservice.dto.UserDTO;
 import sn.smtg.userservice.dto.UserPublicDTO;
@@ -43,13 +45,37 @@ public class UserController {
     public ResponseEntity<UserAuthDTO> getUserForAuthentication(
             @PathVariable String email,
             @RequestHeader(value = "X-Internal-Service-Token", required = false) String serviceToken) {
-        if (internalServiceToken.isBlank() || serviceToken == null
-                || !MessageDigest.isEqual(
-                        internalServiceToken.getBytes(StandardCharsets.UTF_8),
-                        serviceToken.getBytes(StandardCharsets.UTF_8))) {
+        if (!isInternalServiceTokenValid(serviceToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         return userService.getUserForAuthenticationByEmail(email);
+    }
+
+    @PostMapping("internal/password-reset/token")
+    public ResponseEntity<String> enregistrerJetonReinitialisation(
+            @RequestBody PasswordResetTokenRequest request,
+            @RequestHeader(value = "X-Internal-Service-Token", required = false) String serviceToken) {
+        if (!isInternalServiceTokenValid(serviceToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return userService.enregistrerJetonReinitialisation(request);
+    }
+
+    @PostMapping("internal/password-reset/complete")
+    public ResponseEntity<String> terminerReinitialisation(
+            @RequestBody PasswordResetCompletionRequest request,
+            @RequestHeader(value = "X-Internal-Service-Token", required = false) String serviceToken) {
+        if (!isInternalServiceTokenValid(serviceToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return userService.reinitialiserMotDePasse(request);
+    }
+
+    private boolean isInternalServiceTokenValid(String serviceToken) {
+        return !internalServiceToken.isBlank() && serviceToken != null
+                && MessageDigest.isEqual(
+                        internalServiceToken.getBytes(StandardCharsets.UTF_8),
+                        serviceToken.getBytes(StandardCharsets.UTF_8));
     }
 
     @GetMapping("all")

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réinitialiser votre mot de passe QuizApp</title>
+</head>
+<body style="margin:0;padding:24px;background:#10172a;color:#f4f6fb;font-family:Arial,sans-serif">
+  <main style="max-width:560px;margin:0 auto;padding:28px;border:1px solid #34415a;border-radius:16px;background:#182238">
+    <h1 style="color:#c2f970">Réinitialisation du mot de passe</h1>
+    <p>Une demande de changement du mot de passe de votre compte QuizApp a été reçue.</p>
+    <p>Ce lien est valable pendant 30 minutes et ne peut être utilisé qu’une seule fois.</p>
+    <p style="margin:28px 0">
+      <a th:href="${resetUrl}" style="display:inline-block;padding:13px 20px;border-radius:8px;background:#c2f970;color:#17200f;font-weight:bold;text-decoration:none">
+        Choisir un nouveau mot de passe
+      </a>
+    </p>
+    <p>Si vous n’êtes pas à l’origine de cette demande, ignorez ce message. Votre mot de passe ne changera pas.</p>
+  </main>
+</body>
+</html>

@@ -11,6 +11,8 @@ const elements = {
   appPanel: document.querySelector("#app-panel"),
   loginForm: document.querySelector("#login-form"),
   registerForm: document.querySelector("#register-form"),
+  forgotPasswordForm: document.querySelector("#forgot-password-form"),
+  resetPasswordForm: document.querySelector("#reset-password-form"),
   authTitle: document.querySelector("#auth-title"),
   notice: document.querySelector("#notice"),
   logout: document.querySelector("#logout-button"),
@@ -25,6 +27,7 @@ const elements = {
 let questionsActives = [];
 let quizActifId = null;
 let requeteEnCours = false;
+let jetonReinitialisation = null;
 
 function session() {
   return {
@@ -69,7 +72,19 @@ async function apiRequest(path, options = {}, authenticated = true) {
     headers.set("Authorization", `Bearer ${currentSession.token}`);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal || AbortSignal.timeout(15000)
+    });
+  } catch (error) {
+    if (error && error.name === "TimeoutError") {
+      throw new Error("Le service met trop de temps à répondre. Réessaie dans quelques instants.");
+    }
+    throw error;
+  }
   const content = await response.text();
   let data = content;
   if (content) {
@@ -130,6 +145,10 @@ function showLoginForm() {
   elements.authTitle.textContent = "Content de te revoir";
   elements.loginForm.classList.remove("hidden");
   elements.registerForm.classList.add("hidden");
+  elements.forgotPasswordForm.classList.add("hidden");
+  elements.resetPasswordForm.classList.add("hidden");
+  document.querySelector(".auth-switch").classList.remove("hidden");
+  jetonReinitialisation = null;
   document.querySelector("#show-login").classList.add("is-active");
   document.querySelector("#show-register").classList.remove("is-active");
   clearNotice();
@@ -139,8 +158,34 @@ function showRegisterForm() {
   elements.authTitle.textContent = "Crée ton compte";
   elements.registerForm.classList.remove("hidden");
   elements.loginForm.classList.add("hidden");
+  elements.forgotPasswordForm.classList.add("hidden");
+  elements.resetPasswordForm.classList.add("hidden");
+  document.querySelector(".auth-switch").classList.remove("hidden");
+  jetonReinitialisation = null;
   document.querySelector("#show-register").classList.add("is-active");
   document.querySelector("#show-login").classList.remove("is-active");
+  clearNotice();
+}
+
+function showForgotPasswordForm() {
+  elements.authTitle.textContent = "Réinitialiser ton mot de passe";
+  elements.loginForm.classList.add("hidden");
+  elements.registerForm.classList.add("hidden");
+  elements.resetPasswordForm.classList.add("hidden");
+  elements.forgotPasswordForm.classList.remove("hidden");
+  document.querySelector(".auth-switch").classList.add("hidden");
+  jetonReinitialisation = null;
+  clearNotice();
+}
+
+function showResetPasswordForm(token) {
+  elements.authTitle.textContent = "Choisis un nouveau mot de passe";
+  elements.loginForm.classList.add("hidden");
+  elements.registerForm.classList.add("hidden");
+  elements.forgotPasswordForm.classList.add("hidden");
+  elements.resetPasswordForm.classList.remove("hidden");
+  document.querySelector(".auth-switch").classList.add("hidden");
+  jetonReinitialisation = token;
   clearNotice();
 }
 
@@ -267,6 +312,9 @@ async function showResults(score) {
 
 document.querySelector("#show-login").addEventListener("click", showLoginForm);
 document.querySelector("#show-register").addEventListener("click", showRegisterForm);
+document.querySelector("#show-forgot-password").addEventListener("click", showForgotPasswordForm);
+document.querySelector("#back-to-login-from-forgot").addEventListener("click", showLoginForm);
+document.querySelector("#back-to-login-from-reset").addEventListener("click", showLoginForm);
 
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -287,6 +335,59 @@ elements.loginForm.addEventListener("submit", async (event) => {
     notify(`Bienvenue${data.email ? `, ${data.email}` : ""} !`);
   } catch (error) {
     notify(error.message || "Connexion impossible. Vérifie tes identifiants.", true);
+  } finally {
+    setBusy(button, false);
+  }
+});
+
+elements.forgotPasswordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearNotice();
+  const button = elements.forgotPasswordForm.querySelector('button[type="submit"]');
+  setBusy(button, true, "Envoi en cours…");
+  const formData = new FormData(elements.forgotPasswordForm);
+  try {
+    const message = await apiRequest("/auth-service/auth/mot-de-passe-oublie", {
+      method: "POST",
+      body: JSON.stringify({ email: String(formData.get("email")).trim() })
+    }, false);
+    elements.forgotPasswordForm.reset();
+    notify(typeof message === "string" ? message : "Si un compte existe pour cette adresse, un lien lui sera envoyé.");
+  } catch {
+    notify("Le lien n’a pas pu être envoyé pour le moment. Réessaie plus tard.", true);
+  } finally {
+    setBusy(button, false);
+  }
+});
+
+elements.resetPasswordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearNotice();
+  const formData = new FormData(elements.resetPasswordForm);
+  const password = String(formData.get("motDePasse"));
+  const confirmation = String(formData.get("confirmation"));
+  if (password.length < 8 || new TextEncoder().encode(password).length > 72) {
+    notify("Le nouveau mot de passe doit contenir 8 à 72 octets en UTF-8.", true);
+    return;
+  }
+  if (password !== confirmation) {
+    notify("Les deux mots de passe ne correspondent pas.", true);
+    return;
+  }
+
+  const button = elements.resetPasswordForm.querySelector('button[type="submit"]');
+  setBusy(button, true, "Enregistrement…");
+  try {
+    const message = await apiRequest("/auth-service/auth/reinitialiser-mot-de-passe", {
+      method: "POST",
+      body: JSON.stringify({ token: jetonReinitialisation, motDePasse: password })
+    }, false);
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    elements.resetPasswordForm.reset();
+    showLoginForm();
+    notify(typeof message === "string" ? message : "Mot de passe réinitialisé. Connecte-toi avec ton nouveau mot de passe.");
+  } catch (error) {
+    notify(error.message || "Le lien est invalide ou expiré. Demande-en un nouveau.", true);
   } finally {
     setBusy(button, false);
   }
@@ -415,7 +516,12 @@ document.querySelector("#quiz-category").addEventListener("input", (event) => {
   }
 });
 
-if (session().token && session().userId) {
+const tokenFromResetLink = new URLSearchParams(window.location.hash.slice(1)).get("resetToken");
+if (tokenFromResetLink) {
+  showAuthentication();
+  showResetPasswordForm(tokenFromResetLink);
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+} else if (session().token && session().userId) {
   showApplication();
 } else {
   showAuthentication();

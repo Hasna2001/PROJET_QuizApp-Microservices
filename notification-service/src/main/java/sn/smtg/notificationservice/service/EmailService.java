@@ -56,4 +56,30 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void envoyerLienReinitialisation(String email, String resetUrl) throws Exception {
+        if (adresseExpediteur.isBlank() || motDePasseApplication.isBlank()) {
+            throw new IllegalStateException(
+                    "Configurez GMAIL_USERNAME et GMAIL_APP_PASSWORD dans .env. "
+                            + "Pour Gmail, utilisez un mot de passe d'application, pas celui du compte.");
+        }
+        if (email == null || email.isBlank() || resetUrl == null || resetUrl.isBlank()) {
+            throw new IllegalArgumentException("Adresse e-mail ou lien de réinitialisation manquant.");
+        }
+
+        Context context = new Context();
+        context.setVariable("resetUrl", resetUrl);
+        String contenuHtml = templateEngine.process("email-reinitialisation-mot-de-passe", context);
+        String contenuTexte = "Pour choisir un nouveau mot de passe QuizApp, ouvrez ce lien (valable 30 minutes) : "
+                + resetUrl + "\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.";
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom(expediteur);
+        helper.setTo(email);
+        helper.setSubject("Réinitialisation du mot de passe QuizApp");
+        helper.setText(contenuTexte, contenuHtml);
+
+        mailSender.send(message);
+    }
 }

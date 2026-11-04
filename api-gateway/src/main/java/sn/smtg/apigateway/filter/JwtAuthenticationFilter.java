@@ -23,6 +23,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final List<String> cheminsPublics = List.of(
             "/auth-service/auth/login",
+            "/auth-service/auth/mot-de-passe-oublie",
+            "/auth-service/auth/reinitialiser-mot-de-passe",
             "/user-service/user/inscrire",
             "/index.html",
             "/api",

@@ -62,10 +62,14 @@ services:
         condition: service_started
       user-service:
         condition: service_started
+      notification-service:
+        condition: service_started
     environment:
       <<: *eureka-env
       JWT_SECRET: ${JWT_SECRET}
       USER_SERVICE_INTERNAL_TOKEN: ${USER_SERVICE_INTERNAL_TOKEN:?Set USER_SERVICE_INTERNAL_TOKEN in your environment}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8765}
+      NOTIFICATION_SERVICE_URL: http://notification-service:8094
     ports: ["8093:8093"]
     networks: [quizapp-net]
     restart: on-failure
@@ -114,6 +118,7 @@ services:
       <<: *eureka-env
       GMAIL_USERNAME: ${GMAIL_USERNAME:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      USER_SERVICE_INTERNAL_TOKEN: ${USER_SERVICE_INTERNAL_TOKEN:?Set USER_SERVICE_INTERNAL_TOKEN in your environment}
     ports: ["8094:8094"]
     networks: [quizapp-net]
     restart: on-failure

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#10172a">
   <title>QuizApp — Révise et progresse</title>
   <link rel="stylesheet" href="/assets/app.css">
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=password-reset" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -51,6 +51,23 @@
         <label for="login-password">Mot de passe</label>
         <input id="login-password" name="motDePasse" type="password" autocomplete="current-password" required>
         <button class="button button-primary full-width" type="submit">Se connecter <span aria-hidden="true">→</span></button>
+        <button id="show-forgot-password" class="form-link" type="button">Mot de passe oublié ?</button>
+      </form>
+
+      <form id="forgot-password-form" class="form-stack hidden">
+        <label for="forgot-email">Adresse e-mail de ton compte</label>
+        <input id="forgot-email" name="email" type="email" autocomplete="email" placeholder="toi@exemple.com" required>
+        <button class="button button-primary full-width" type="submit">Recevoir le lien de réinitialisation</button>
+        <button id="back-to-login-from-forgot" class="form-link" type="button">Retour à la connexion</button>
+      </form>
+
+      <form id="reset-password-form" class="form-stack hidden">
+        <label for="reset-password">Nouveau mot de passe</label>
+        <input id="reset-password" name="motDePasse" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+        <label for="reset-password-confirm">Confirme le nouveau mot de passe</label>
+        <input id="reset-password-confirm" name="confirmation" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+        <button class="button button-primary full-width" type="submit">Enregistrer le nouveau mot de passe</button>
+        <button id="back-to-login-from-reset" class="form-link" type="button">Retour à la connexion</button>
       </form>
 
       <form id="register-form" class="form-stack hidden">
