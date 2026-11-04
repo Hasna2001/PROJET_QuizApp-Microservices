@@ -338,7 +338,7 @@ Au premier démarrage de `question-service`, 20 questions de démonstration sont
 | Service de données en échec au démarrage local | MySQL absent, inaccessible ou identifiants différents | Vérifier `localhost:3306`, le compte et le mot de passe MySQL dans les propriétés du service |
 | `Access denied` ou `Unknown database` | Identifiants MySQL incorrects ou initialisation de base échouée | Consulter les journaux MySQL et vérifier le volume/droits de l’utilisateur |
 | Création de quiz sans questions disponibles | Catégorie inexistante ou base de questions non initialisée | Vérifier que `question-service` est enregistré et que ses questions existent |
-| Courriel non envoyé | Paramètres SMTP absents ou incorrects | Renseigner un mot de passe d’application Gmail dans `.env` et consulter les journaux de notification ; le score et les points restent indépendants de l’envoi du courriel |
+| Courriel non envoyé | Paramètres SMTP absents ou incorrects | Le résultat du quiz reste affiché dans QuizApp avec une notification à l’écran ; pour recevoir aussi un courriel, renseigner un mot de passe d’application valide dans `.env` |
 
 Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers locaux utilisent `localhost:3306`, tandis que les conteneurs accèdent à MySQL par `mysql:3306`. Docker publie le port conteneur 3306 sur `localhost:3307`.
 
@@ -353,12 +353,10 @@ Les noms `localhost` et `mysql` ne sont pas interchangeables : les fichiers loca
 
 ## 11. Portée et limites connues
 
-- Les appels interservices sont synchrones ; aucun mécanisme de reprise ni disjoncteur Resilience4j n’est configuré.
-- La Gateway vérifie le JWT, mais les services ne le valident pas eux-mêmes. Leurs ports étant publiés par Docker Compose, un appel direct contourne la Gateway. De plus, `user-service` utilise `permitAll()` ; ses opérations ne disposent pas d’autorisation propre au service.
-- `USER_SERVICE_INTERNAL_TOKEN` protège uniquement la route interne qui retourne les données d’authentification. La classe principale de `user-service` active aussi la détection Feign avec `@EnableFeignClients`, mais ce service ne déclare aucun client Feign.
-- Plusieurs services possèdent leur propre DTO `UserWrapper` ; une factorisation des champs communs peut être étudiée sans exposer le hash du mot de passe aux services qui n’en ont pas besoin.
-- À la soumission, `quiz-service` accepte `utilisateurId` sans le comparer à l’identité du JWT et n’empêche pas les soumissions répétées. La sécurité par rôles et les contrôles de propriété des comptes ne sont pas implémentés.
-- `POST /quiz-service/quiz/creer` répond `201 Created` avec l’identifiant du quiz créé ; si aucune question n’est disponible, cette implémentation répond `404`.
-- L’interface bloque les doubles clics et retire le quiz de l’écran après sa soumission, mais la protection anti-répétition n’est pas encore garantie par le backend.
-- Le secret JWT doit être identique dans `auth-service` et la Gateway. Remplacez les valeurs de développement par une variable d’environnement sécurisée ; ne versionnez pas de secrets réels.
-- L’e-mail dépend de la configuration SMTP. Son échec n’empêche pas l’enregistrement de la gratification ; si cet enregistrement échoue, `quiz-service` peut néanmoins retourner le score.
+Les tests réalisés confirment le fonctionnement des principales fonctionnalités de QuizApp : consultation du profil sans exposition du mot de passe (V.7 et V.9.2), refus d’accès sans JWT avec HTTP 401 (V.8), création et consultation des quiz, soumission des réponses et calcul des scores (V.3 à V.6).
+
+- **Sécurité :** bien que le profil public n’expose pas le hash du mot de passe, le port 8091 de `user-service` est publié dans Docker Compose. Un accès direct au service peut donc contourner la protection JWT de la Gateway. Les accès aux services métier et aux opérations sensibles doivent être mieux protégés.
+- **Soumission des quiz :** le test confirme le calcul du score, mais le contrôle de la correspondance entre `utilisateurId` et l’identité du JWT, ainsi que le blocage des soumissions répétées, ne sont pas démontrés.
+- **Communication :** les appels entre microservices via OpenFeign sont synchrones. Des mécanismes de résilience, comme Resilience4j, pourraient améliorer la gestion des indisponibilités.
+- **Notifications :** les figures 73 à 75 confirment le démarrage de `notification-service` et la consultation de ses journaux, mais ne prouvent pas la réception effective d’un e-mail.
+- **Configuration :** avant un déploiement en production, les secrets JWT, le jeton interne, les identifiants MySQL et les paramètres SMTP doivent être sécurisés et fournis par des variables d’environnement.
