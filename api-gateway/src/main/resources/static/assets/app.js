@@ -258,7 +258,11 @@ async function showResults(score) {
   await loadLeaderboard();
 
   const missingStats = [pointsResult, rankResult].some((result) => result.status === "rejected");
-  if (missingStats) notify("Le score est enregistré, mais les statistiques ne sont pas toutes disponibles.", true);
+  if (missingStats) {
+    notify("Quiz terminé ! Ton score est affiché. Certaines statistiques ne sont pas disponibles pour le moment.", true);
+  } else {
+    notify(`Quiz terminé ! Ton score : ${score}/${maximum}. Consulte tes points et ton classement ci-dessous.`);
+  }
 }
 
 document.querySelector("#show-login").addEventListener("click", showLoginForm);

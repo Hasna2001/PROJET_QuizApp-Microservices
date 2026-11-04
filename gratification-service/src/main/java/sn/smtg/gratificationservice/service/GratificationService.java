@@ -1,5 +1,7 @@
 package sn.smtg.gratificationservice.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 @Service
 public class GratificationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GratificationService.class);
 
     @Autowired
     GratificationRepo gratificationRepo;
@@ -45,7 +49,8 @@ public class GratificationService {
                 notificationInterface.envoyerNotification(
                         new NotificationRequest(dto.getUtilisateurId(), dto.getQuizId(), dto.getScore(), points));
             } catch (Exception e) {
-                System.err.println("Notification non envoyée : " + e.getMessage());
+                logger.warn("Notification non envoyée pour l'utilisateur {} et le quiz {}",
+                        dto.getUtilisateurId(), dto.getQuizId(), e);
             }
 
             return new ResponseEntity<>("Gratification ajoutée avec succès", HttpStatus.CREATED);

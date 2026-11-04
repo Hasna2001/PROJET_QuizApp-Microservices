@@ -22,7 +22,22 @@ public class EmailService {
     @Value("${mail.expediteur}")
     private String expediteur;
 
+    @Value("${spring.mail.username:}")
+    private String adresseExpediteur;
+
+    @Value("${spring.mail.password:}")
+    private String motDePasseApplication;
+
     public void envoyerResultatQuiz(UserWrapper user, Integer quizId, Integer score, Integer points) throws Exception {
+        if (adresseExpediteur.isBlank() || motDePasseApplication.isBlank()) {
+            throw new IllegalStateException(
+                    "Configurez GMAIL_USERNAME et GMAIL_APP_PASSWORD dans .env. "
+                            + "Pour Gmail, utilisez un mot de passe d'application, pas celui du compte.");
+        }
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("L'utilisateur ne possède pas d'adresse e-mail.");
+        }
+
         Context context = new Context();
         context.setVariable("nom", user.getNom());
         context.setVariable("prenom", user.getPrenom());
